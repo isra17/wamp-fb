@@ -1,17 +1,22 @@
-from wsgiref.simple_server import make_server
+from flask import abort
 import registerer
-import json
 
-# A relatively simple WSGI application. It's going to print out the
-# environment dictionary after being updated by setup_testing_defaults
-def auth_handler(user, environ, start_response):
-    status = '200 OK'
-    headers = [('Content-type', 'application/json; charset=utf-8')]
+_USERDB = {}
 
-    start_response(status, headers)
+def handle_auth(user):
+    global _USERDB
+    _USERDB[user['id']] = {
+        'secret': user['auth_token'],
+        'role': 'user',
+    }
+    print(_USERDB)
 
-    return [json.dumps(user).encode()]
+def handle_wra(data):
+    authid = data['authid']
+    if not authid in _USERDB:
+        abort(401)
+    return _USERDB[data['authid']]
 
-httpd = make_server('', 8000, registerer.create_app(auth_handler))
-print("Serving on port 8000...")
-httpd.serve_forever()
+app = registerer.create_app(handle_auth, handle_wra)
+app.debug = True
+app.run()

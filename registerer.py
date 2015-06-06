@@ -1,55 +1,39 @@
-import cgi
+from flask import Flask, request, abort
 import urllib
 import json
-from urllib import request
-from urllib.error import URLError
-
-status = {
-    401: '401 Unauthorized',
-    404: '404 Not Found',
-    422: '422 Unprocessable Entity',
-}
-
-def is_auth_request(environ):
-    return environ['REQUEST_METHOD'] != 'POST' and environ['PATH_INFO'] != '/auth'
-
-def get_post(environ):
-    post_env = environ.copy()
-    post_env['QUERY_STRING'] = ''
-    post = cgi.FieldStorage(
-        fp=environ['wsgi.input'],
-        environ=post_env
-    )
-    return post
 
 def fb_user(fb_token, fields=[]):
     url = 'https://graph.facebook.com/v2.3/me?' \
-            + 'fields=' + request.quote(','.join(fields)) \
-            + '&access_token=' + request.quote(fb_token)
+            + 'fields=' + urllib.request.quote(','.join(fields)) \
+            + '&access_token=' + urllib.request.quote(fb_token)
     try:
-        r = request.urlopen(url)
+        r = urllib.request.urlopen(url)
         return json.loads(r.read().decode())
-    except URLError as e:
+    except urllib.error.URLError as e:
         return None
 
-def create_app(auth_handler, user_fields=[]):
-    def app(environ, response):
-        if is_auth_request(environ):
-            response(status[404], [])
-            return ''
+def create_app(handle_auth, wra_info, user_fields=[]):
+    app = Flask(__name__)
 
-        post = get_post(environ)
-        if not 'fb_token' in post:
-            response(status[422], [])
-            return ''
-        fb_token = post['fb_token'].value
+    @app.route('/auth', methods=['POST'])
+    def auth():
+        fb_token = request.form['fb_token']
+        if fb_token is None:
+            abort(401)
 
         user_data = fb_user(fb_token, user_fields)
         if user_data is None:
-            response(status[401], [])
-            return ''
+            abort(401)
 
-        return auth_handler(user_data, environ, response)
+        user_data['auth_token'] = fb_token
+        if handle_auth(user_data) == False:
+            abort(401)
+
+        return ''
+
+    @app.route('/wra', methods=['POST'])
+    def wra():
+        return json.dumps(wra_info(request.form))
 
     return app
 
