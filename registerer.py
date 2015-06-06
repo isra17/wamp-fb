@@ -33,6 +33,8 @@ def create_app(handle_auth, wra_info, user_fields=[]):
 
     @app.route('/wra', methods=['POST'])
     def wra():
+        #IMPORTANT!: Request should be authenticated otherwise
+        #anyone can dump anyone's auth token
         return json.dumps(wra_info(request.form))
 
     return app

@@ -12,6 +12,10 @@ def handle_auth(user):
     print(_USERDB)
 
 def handle_wra(data):
+    #IMPORTANT!: Request should be authenticated otherwise
+    #anyone can dump anyone's auth token
+    #DONT USE THIS SNIPPET IN PROD!
+    print(data)
     authid = data['authid']
     if not authid in _USERDB:
         abort(401)
