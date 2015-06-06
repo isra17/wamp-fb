@@ -52,3 +52,4 @@ def create_app(auth_handler, user_fields=[]):
         return auth_handler(user_data, environ, response)
 
     return app
+
